@@ -1,0 +1,237 @@
+<!doctype html>
+<html lang="zh-CN" data-theme="light">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#f4f6f2">
+  <title data-i18n="pageTitle">专注刻度 FocusGrid</title>
+  <link rel="stylesheet" href="assets/css/styles.css">
+</head>
+<body>
+  <div class="app-shell">
+    <header class="topbar">
+      <a class="brand" href="#" aria-label="专注刻度 FocusGrid 首页" data-i18n-aria-label="homeLabel">
+        <span class="brand-mark" aria-hidden="true" data-i18n="brandMark">刻</span>
+        <span data-i18n="brandName">专注刻度</span>
+      </a>
+      <div class="topbar-actions">
+        <button class="button button-quiet" id="export-button" type="button" data-i18n="exportBackup">导出备份</button>
+        <button class="button button-quiet" id="import-button" type="button" data-i18n="importBackup">导入备份</button>
+        <button class="language-toggle" id="language-toggle" type="button" aria-label="Switch to English" title="Switch to English">EN</button>
+        <button class="theme-toggle" id="theme-toggle" type="button" aria-label="切换到黑色模式" data-i18n-aria-label="themeDark" data-i18n-title="themeDark" title="切换到黑色模式" aria-pressed="false">
+          <svg class="theme-icon theme-icon-sun" viewBox="0 0 24 24" aria-hidden="true">
+            <circle cx="12" cy="12" r="4"></circle>
+            <path d="M12 2v2m0 16v2M4.93 4.93l1.42 1.42m11.3 11.3 1.42 1.42M2 12h2m16 0h2M4.93 19.07l1.42-1.42m11.3-11.3 1.42-1.42"></path>
+          </svg>
+          <svg class="theme-icon theme-icon-moon" viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M20.2 15.1A8.5 8.5 0 0 1 8.9 3.8 8.6 8.6 0 1 0 20.2 15.1Z"></path>
+          </svg>
+        </button>
+        <input id="import-file" type="file" accept="application/json,.json" hidden>
+      </div>
+    </header>
+
+    <main>
+      <section class="intro">
+        <div>
+          <p class="eyebrow">MAKE TIME COUNT</p>
+          <h1 data-i18n="heroTitle">把专注，变成看得见的积累。</h1>
+          <p class="intro-copy" data-i18n="heroCopy">选择一项工作，开始专注。时间会自动记下来。</p>
+        </div>
+      </section>
+
+      <div id="app-message" class="message" role="status" hidden></div>
+
+      <section class="focus-card" aria-labelledby="focus-heading">
+        <div class="focus-card-heading">
+          <div>
+            <p class="eyebrow">CURRENT SESSION</p>
+            <h2 id="focus-heading" data-i18n="focusTimer">专注计时</h2>
+          </div>
+          <span class="live-indicator" id="focus-indicator"><span></span><span id="focus-indicator-label" data-i18n="statusIdle">尚未开始</span></span>
+        </div>
+        <div class="focus-controls">
+          <span class="field-label" data-i18n="focusTaskPrompt">这段时间要做什么？</span>
+          <div class="focus-control-row">
+            <span class="focus-task-picker">
+              <button class="analysis-task-trigger" id="focus-task-trigger" type="button" aria-label="选择工作项" data-i18n-aria-label="selectTask" aria-haspopup="listbox" aria-expanded="false" aria-controls="focus-task-menu">
+                <span class="analysis-task-trigger-label">请先添加工作项</span>
+                <span class="analysis-task-chevron" aria-hidden="true"></span>
+              </button>
+              <span class="analysis-task-menu" id="focus-task-menu" role="listbox" aria-label="选择工作项" data-i18n-aria-label="selectTask" hidden></span>
+            </span>
+            <button class="button button-primary" id="start-button" type="button" data-i18n="startFocus">开始专注</button>
+            <button class="button button-stop" id="stop-button" type="button" disabled data-i18n="endFocus">结束专注</button>
+          </div>
+        </div>
+        <div class="running-session" id="running-session" hidden>
+          <span class="running-task-dot" id="running-task-dot"></span>
+          <div class="running-session-copy">
+            <strong id="running-task-name"></strong>
+            <span id="running-start-time"></span>
+          </div>
+          <time class="elapsed-time" id="elapsed-time">00:00:00</time>
+        </div>
+        <div class="focus-footer">
+          <span class="subtle-copy" id="focus-hint">切换到其他标签页也会继续计时，回来时自动更新。</span>
+          <span class="focus-footer-actions">
+            <button class="text-button" id="manage-tasks-button" type="button" data-i18n="manageTasks">管理工作项</button>
+            <button class="text-button" id="toggle-insights-button" type="button" aria-expanded="false" aria-controls="calendar-section" data-i18n="showInsights">查看年度日历与数据分析</button>
+          </span>
+        </div>
+        <div class="task-manager" id="task-manager" hidden>
+          <div class="task-manager-title">
+            <div>
+              <h3 data-i18n="myTasks">我的工作项</h3>
+              <p data-i18n="taskColorHelp">颜色会用于日历中的时间色块。</p>
+            </div>
+            <button class="icon-button small-icon-button" id="close-task-manager" type="button" aria-label="关闭工作项管理" data-i18n-aria-label="closeTaskManager">×</button>
+          </div>
+          <form id="task-form" class="task-form">
+            <label class="task-name-field">
+              <span class="field-label" data-i18n="taskName">名称</span>
+              <input id="task-name" name="name" maxlength="40" placeholder="例如：阅读、写代码、英语学习" data-i18n-placeholder="taskNamePlaceholder" required>
+            </label>
+            <label class="color-field">
+              <span class="field-label" data-i18n="color">颜色</span>
+              <input id="task-color" name="color" type="color" value="#589a73" aria-label="工作项颜色" data-i18n-aria-label="taskColor">
+            </label>
+            <button class="button button-secondary" id="save-task-button" type="submit" data-i18n="addTask">添加工作项</button>
+            <button class="text-button cancel-edit-button" id="cancel-edit-button" type="button" data-i18n="cancelEdit" hidden>取消编辑</button>
+          </form>
+          <div class="task-list" id="task-list"></div>
+        </div>
+      </section>
+
+      <section class="calendar-section" id="calendar-section" aria-labelledby="calendar-heading" hidden>
+        <div class="view-toolbar">
+          <div class="view-tabs" role="tablist" aria-label="时间视图" data-i18n-aria-label="timeViews">
+            <button class="view-tab is-active" id="calendar-tab" type="button" role="tab" aria-selected="true" aria-controls="calendar-view" data-view="calendar" data-i18n="annualCalendar">年度日历</button>
+            <button class="view-tab" id="analysis-tab" type="button" role="tab" aria-selected="false" aria-controls="analysis-view" data-view="analysis" data-i18n="dataAnalysis">数据分析</button>
+          </div>
+        </div>
+        <div id="calendar-view" role="tabpanel" aria-labelledby="calendar-tab">
+        <div class="section-heading">
+          <div>
+            <p class="eyebrow">YOUR YEAR IN FOCUS</p>
+            <h2 id="calendar-heading" data-i18n="annualTimeCalendar">年度时间日历</h2>
+            <p class="section-description" data-i18n="calendarDescription">每天的色块按工作项堆叠，高度随投入时间增加。点击日期查看记录。</p>
+          </div>
+          <div class="calendar-heading-summary">
+            <div class="year-switcher" aria-label="切换日历年份" data-i18n-aria-label="calendarYear">
+              <button class="icon-button" id="previous-year" type="button" aria-label="上一年" data-i18n-aria-label="previousYear">‹</button>
+              <span id="calendar-year"></span>
+              <button class="icon-button" id="next-year" type="button" aria-label="下一年" data-i18n-aria-label="nextYear">›</button>
+            </div>
+            <div class="year-total">
+              <span data-i18n="yearFocus">全年专注</span>
+              <strong id="year-total">0 小时</strong>
+            </div>
+          </div>
+        </div>
+        <div class="calendar-legend" id="calendar-legend" aria-label="工作项颜色图例" data-i18n-aria-label="taskColorLegend"></div>
+        <div id="calendar" class="calendar-grid"></div>
+        <p class="calendar-footnote" data-i18n="calendarFootnote">色块高度以每天 8 小时作为视觉参考上限；鼠标悬停或点击可查看准确时长。</p>
+        </div>
+        <div id="analysis-view" role="tabpanel" aria-labelledby="analysis-tab" hidden>
+          <div class="section-heading analysis-heading">
+            <div>
+              <p class="eyebrow">FOCUS TRENDS</p>
+              <h2 id="analysis-heading" data-i18n="focusTrends">专注时间趋势</h2>
+              <p class="section-description" data-i18n="analysisDescription">按天查看专注时长，观察投入节奏与变化。</p>
+            </div>
+            <label class="analysis-task-filter">
+              <span class="field-label" data-i18n="task">工作项</span>
+              <span class="analysis-task-picker">
+                <button class="analysis-task-trigger" id="analysis-task-trigger" type="button" aria-label="选择要分析的工作项" data-i18n-aria-label="selectAnalysisTask" aria-haspopup="listbox" aria-expanded="false" aria-controls="analysis-task-menu">
+                  <span class="analysis-task-trigger-label">全部工作项</span>
+                  <span class="analysis-task-chevron" aria-hidden="true"></span>
+                </button>
+                <span class="analysis-task-menu" id="analysis-task-menu" role="listbox" aria-label="选择要分析的工作项" data-i18n-aria-label="selectAnalysisTask" hidden></span>
+              </span>
+            </label>
+          </div>
+          <div class="analysis-range" role="group" aria-label="选择分析时间范围" data-i18n-aria-label="selectDateRange">
+            <button class="range-button" type="button" data-range="last3" aria-pressed="true" data-i18n="last3Days">过去 3 天</button>
+            <button class="range-button" type="button" data-range="last7" aria-pressed="false" data-i18n="last7Days">过去 7 天</button>
+            <button class="range-button" type="button" data-range="week" aria-pressed="false" data-i18n="thisWeek">本周</button>
+            <button class="range-button" type="button" data-range="month" aria-pressed="false" data-i18n="thisMonth">本月</button>
+            <button class="range-button" type="button" data-range="year" aria-pressed="false" data-i18n="thisYear">本年</button>
+          </div>
+          <div class="analysis-summary" aria-live="polite">
+            <div class="analysis-stat"><span data-i18n="focusInRange">所选时段专注</span><strong id="analysis-total">0 分钟</strong></div>
+            <div class="analysis-stat"><span data-i18n="dailyAverage">日均专注</span><strong id="analysis-average">0 分钟</strong></div>
+            <div class="analysis-stat"><span data-i18n="focusDays">专注天数</span><strong id="analysis-active-days">0 天</strong></div>
+          </div>
+          <div class="chart-card">
+            <div class="chart-heading">
+              <div>
+                <h3 id="chart-title" data-i18n="dailyFocusTime">每日专注时间</h3>
+                <p id="chart-range-label"></p>
+              </div>
+              <span class="chart-unit" data-i18n="chartUnit">单位：小时</span>
+            </div>
+            <div class="chart-scroll">
+              <div id="analysis-chart" class="analysis-chart"></div>
+            </div>
+            <p class="chart-empty" id="chart-empty" data-i18n="chartEmpty">所选时段还没有专注记录。开始专注后，趋势会显示在这里。</p>
+          </div>
+        </div>
+      </section>
+    </main>
+    <footer class="app-footer" data-i18n="footerNote">你的记录保存在当前浏览器中。记得定期导出备份。</footer>
+  </div>
+
+  <dialog id="day-dialog" class="day-dialog">
+    <div class="dialog-heading">
+      <div>
+        <p class="eyebrow" data-i18n="dayDetails">DAY DETAILS</p>
+        <h2 id="dialog-date"></h2>
+      </div>
+      <button class="icon-button small-icon-button" id="close-day-dialog" type="button" aria-label="关闭日期详情" data-i18n-aria-label="closeDayDetails">×</button>
+    </div>
+    <div class="day-summary" id="day-summary"></div>
+    <div class="day-breakdown" id="day-breakdown"></div>
+    <div class="session-list" id="session-list"></div>
+  </dialog>
+  <dialog id="stop-dialog" class="day-dialog stop-dialog" aria-labelledby="stop-dialog-heading">
+    <form id="stop-form">
+      <div class="dialog-heading">
+        <div>
+          <p class="eyebrow">FINISH SESSION</p>
+          <h2 id="stop-dialog-heading" data-i18n="finishSessionPrompt">结束这段专注？</h2>
+        </div>
+        <button class="icon-button small-icon-button" id="close-stop-dialog" type="button" aria-label="取消结束专注" data-i18n-aria-label="closeFinishDialog">×</button>
+      </div>
+      <div class="stop-dialog-content">
+        <div class="stop-task-summary">
+          <span class="task-swatch" id="stop-task-dot"></span>
+          <strong id="stop-task-name"></strong>
+        </div>
+        <p class="stop-dialog-hint" data-i18n="finishDialogHint">确认时间无误，或修正开始和结束时间后保存。</p>
+        <div class="time-edit-grid">
+          <label class="time-edit-field">
+            <span class="field-label" data-i18n="startTime">开始时间</span>
+            <input id="stop-start-time" name="start" type="datetime-local" step="1" required>
+          </label>
+          <label class="time-edit-field">
+            <span class="field-label" data-i18n="endTime">结束时间</span>
+            <input id="stop-end-time" name="end" type="datetime-local" step="1" required>
+          </label>
+        </div>
+        <div class="corrected-duration">
+          <span data-i18n="sessionDuration">本次记录时长</span>
+          <strong id="corrected-duration">—</strong>
+        </div>
+        <p class="stop-form-error" id="stop-form-error" role="alert" hidden></p>
+      </div>
+      <div class="stop-dialog-actions">
+        <button class="button button-discard" id="discard-focus-button" type="button" data-i18n="discardSession">取消专注</button>
+        <button class="button button-quiet" id="cancel-stop-button" type="button" data-i18n="continueFocus">继续专注</button>
+        <button class="button button-stop" id="confirm-stop-button" type="submit" data-i18n="confirmSave">确认并保存</button>
+      </div>
+    </form>
+  </dialog>
+  <script src="assets/js/app.js"></script>
+</body>
+</html>
