@@ -64,6 +64,10 @@
             <button class="button button-stop" id="stop-button" type="button" disabled data-i18n="endFocus">结束专注</button>
           </div>
         </div>
+        <div class="today-focus-summary">
+          <span data-i18n="todayFocus">今日专注</span>
+          <strong id="today-focus-total">00:00:00</strong>
+        </div>
         <div class="running-session" id="running-session" hidden>
           <span class="running-task-dot" id="running-task-dot"></span>
           <div class="running-session-copy">
@@ -151,30 +155,59 @@
               </span>
             </label>
           </div>
-          <div class="analysis-range" role="group" aria-label="选择分析时间范围" data-i18n-aria-label="selectDateRange">
-            <button class="range-button" type="button" data-range="last3" aria-pressed="true" data-i18n="last3Days">过去 3 天</button>
-            <button class="range-button" type="button" data-range="last7" aria-pressed="false" data-i18n="last7Days">过去 7 天</button>
-            <button class="range-button" type="button" data-range="week" aria-pressed="false" data-i18n="thisWeek">本周</button>
-            <button class="range-button" type="button" data-range="month" aria-pressed="false" data-i18n="thisMonth">本月</button>
-            <button class="range-button" type="button" data-range="year" aria-pressed="false" data-i18n="thisYear">本年</button>
+          <div class="analysis-mode-switch" role="group" aria-label="分析类型" data-i18n-aria-label="analysisModes">
+            <button class="range-button is-active" type="button" data-analysis-mode="trend" aria-pressed="true" data-i18n="trendAnalysis">时间趋势</button>
+            <button class="range-button" type="button" data-analysis-mode="daily" aria-pressed="false" data-i18n="dailyBreakdown">每日占比</button>
           </div>
-          <div class="analysis-summary" aria-live="polite">
-            <div class="analysis-stat"><span data-i18n="focusInRange">所选时段专注</span><strong id="analysis-total">0 分钟</strong></div>
-            <div class="analysis-stat"><span data-i18n="dailyAverage">日均专注</span><strong id="analysis-average">0 分钟</strong></div>
-            <div class="analysis-stat"><span data-i18n="focusDays">专注天数</span><strong id="analysis-active-days">0 天</strong></div>
-          </div>
-          <div class="chart-card">
-            <div class="chart-heading">
-              <div>
-                <h3 id="chart-title" data-i18n="dailyFocusTime">每日专注时间</h3>
-                <p id="chart-range-label"></p>
+          <div id="trend-analysis-content">
+            <div class="analysis-range" role="group" aria-label="选择分析时间范围" data-i18n-aria-label="selectDateRange">
+              <button class="range-button" type="button" data-range="last3" aria-pressed="true" data-i18n="last3Days">过去 3 天</button>
+              <button class="range-button" type="button" data-range="last7" aria-pressed="false" data-i18n="last7Days">过去 7 天</button>
+              <button class="range-button" type="button" data-range="week" aria-pressed="false" data-i18n="thisWeek">本周</button>
+              <button class="range-button" type="button" data-range="month" aria-pressed="false" data-i18n="thisMonth">本月</button>
+              <button class="range-button" type="button" data-range="year" aria-pressed="false" data-i18n="thisYear">本年</button>
+            </div>
+            <div class="analysis-summary" aria-live="polite">
+              <div class="analysis-stat"><span data-i18n="focusInRange">所选时段专注</span><strong id="analysis-total">0 分钟</strong></div>
+              <div class="analysis-stat"><span data-i18n="dailyAverage">日均专注</span><strong id="analysis-average">0 分钟</strong></div>
+              <div class="analysis-stat"><span data-i18n="focusDays">专注天数</span><strong id="analysis-active-days">0 天</strong></div>
+            </div>
+            <div class="chart-card">
+              <div class="chart-heading">
+                <div>
+                  <h3 id="chart-title" data-i18n="dailyFocusTime">每日专注时间</h3>
+                  <p id="chart-range-label"></p>
+                </div>
+                <span class="chart-unit" data-i18n="chartUnit">单位：小时</span>
               </div>
-              <span class="chart-unit" data-i18n="chartUnit">单位：小时</span>
+              <div class="chart-scroll">
+                <div id="analysis-chart" class="analysis-chart"></div>
+              </div>
+              <p class="chart-empty" id="chart-empty" data-i18n="chartEmpty">所选时段还没有专注记录。开始专注后，趋势会显示在这里。</p>
             </div>
-            <div class="chart-scroll">
-              <div id="analysis-chart" class="analysis-chart"></div>
+          </div>
+          <div id="daily-pie-content" hidden>
+            <div class="daily-pie-controls">
+              <label class="daily-date-field">
+                <span class="field-label" data-i18n="selectDay">选择日期</span>
+                <input id="daily-analysis-date" type="date" aria-label="选择要分析的日期" data-i18n-aria-label="selectDay">
+              </label>
+              <div class="daily-pie-total">
+                <span data-i18n="dailyTotalFocus">当天专注总时长</span>
+                <strong id="daily-pie-total">0 分钟</strong>
+              </div>
             </div>
-            <p class="chart-empty" id="chart-empty" data-i18n="chartEmpty">所选时段还没有专注记录。开始专注后，趋势会显示在这里。</p>
+            <div class="chart-card daily-pie-card">
+              <div class="chart-heading">
+                <div>
+                  <h3 data-i18n="dailyTaskBreakdown">工作项时间占比</h3>
+                  <p id="daily-pie-date-label"></p>
+                </div>
+              </div>
+              <div id="daily-pie-chart" class="daily-pie-chart"></div>
+              <p class="chart-empty" id="daily-pie-empty" data-i18n="dailyPieEmpty" hidden>所选日期没有专注记录。</p>
+              <div id="daily-pie-legend" class="daily-pie-legend"></div>
+            </div>
           </div>
         </div>
       </section>

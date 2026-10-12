@@ -11,6 +11,7 @@ FocusGrid is a lightweight, offline-first web app for tracking personal focus ti
 - Before saving a session, adjust its start and end times, continue focusing, or discard it.
 - View an annual calendar with daily task blocks stacked by time spent.
 - Explore a line chart for the last 3 days, last 7 days, this week, this month, or this year, with an optional task filter.
+- View a daily pie chart showing each task's focus duration and share for any selected date.
 - Switch between Chinese and English, and between light and dark themes.
 - Export data to a JSON backup and import it later.
 

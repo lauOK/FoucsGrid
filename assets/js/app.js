@@ -13,6 +13,7 @@
       focusTimer: "专注计时", statusIdle: "尚未开始", statusFocusing: "正在专注",
       focusTaskPrompt: "这段时间要做什么？", selectTask: "选择工作项", selectAnalysisTask: "选择要分析的工作项",
       noTasksYet: "请先添加工作项", startFocus: "开始专注", endFocus: "结束专注",
+      todayFocus: "今日专注",
       manageTasks: "管理工作项", myTasks: "我的工作项", taskColorHelp: "颜色会用于日历中的时间色块。",
       showInsights: "查看年度日历与数据分析", hideInsights: "收起年度日历与数据分析",
       closeTaskManager: "关闭工作项管理", taskName: "名称", taskNamePlaceholder: "例如：阅读、写代码、英语学习",
@@ -32,6 +33,13 @@
       task: "工作项", allTasks: "全部工作项", selectDateRange: "选择分析时间范围",
       last3Days: "过去 3 天", last7Days: "过去 7 天", thisWeek: "本周", thisMonth: "本月", thisYear: "本年",
       focusInRange: "所选时段专注", dailyAverage: "日均专注", focusDays: "专注天数",
+      analysisModes: "分析类型", trendAnalysis: "时间趋势", dailyBreakdown: "每日占比",
+      trendHeading: "专注时间趋势", trendDescription: "按天查看专注时长，观察投入节奏与变化。",
+      dailyAnalysisHeading: "每日工作项分析", dailyAnalysisDescription: "选择日期，查看当天各工作项的专注时长占比。",
+      selectDay: "选择日期", dailyTotalFocus: "当天专注总时长", dailyTaskBreakdown: "工作项时间占比",
+      dailyPieEmpty: "所选日期没有专注记录。", pieChartAria: "{date}各工作项专注时长占比",
+      pieSegmentAria: "{task}：{duration}，占 {percent}%",
+      invalidSelectedDay: "请选择有效日期，且不能晚于今天。",
       days: "{value} 天", oneDay: "1 天", dailyFocusTime: "每日专注时间", chartUnit: "单位：小时",
       chartEmpty: "所选时段还没有专注记录。开始专注后，趋势会显示在这里。",
       footerNote: "你的记录保存在当前浏览器中。记得定期导出备份。",
@@ -78,6 +86,7 @@
       focusTimer: "Focus timer", statusIdle: "Not started", statusFocusing: "Focusing",
       focusTaskPrompt: "What are you working on?", selectTask: "Select a task", selectAnalysisTask: "Select a task to analyze",
       noTasksYet: "Add a task first", startFocus: "Start focus", endFocus: "End focus",
+      todayFocus: "Focused today",
       manageTasks: "Manage tasks", myTasks: "My tasks", taskColorHelp: "Colors are used for time blocks on the calendar.",
       showInsights: "View calendar and analytics", hideInsights: "Hide calendar and analytics",
       closeTaskManager: "Close task manager", taskName: "Name", taskNamePlaceholder: "e.g. Reading, coding, language study",
@@ -97,6 +106,13 @@
       task: "Task", allTasks: "All tasks", selectDateRange: "Select date range",
       last3Days: "Last 3 days", last7Days: "Last 7 days", thisWeek: "This week", thisMonth: "This month", thisYear: "This year",
       focusInRange: "Focus in range", dailyAverage: "Daily average", focusDays: "Focus days",
+      analysisModes: "Analysis type", trendAnalysis: "Time trend", dailyBreakdown: "Daily breakdown",
+      trendHeading: "Focus time trends", trendDescription: "View daily focus time to understand your pace and progress.",
+      dailyAnalysisHeading: "Daily task analysis", dailyAnalysisDescription: "Choose a date to see how focus time was divided across tasks.",
+      selectDay: "Select date", dailyTotalFocus: "Total focus time", dailyTaskBreakdown: "Focus time by task",
+      dailyPieEmpty: "No focus sessions on the selected date.", pieChartAria: "Focus time share by task on {date}",
+      pieSegmentAria: "{task}: {duration}, {percent}%",
+      invalidSelectedDay: "Choose a valid date that is not later than today.",
       days: "{value} days", oneDay: "1 day", dailyFocusTime: "Daily focus time", chartUnit: "Hours",
       chartEmpty: "No focus sessions in this period yet. Start a session and your trend will appear here.",
       footerNote: "Your records are stored in this browser. Remember to export backups regularly.",
@@ -148,9 +164,14 @@
   let openedDay = "";
   let analysisRange = "last3";
   let analysisTaskId = "all";
+  let analysisMode = "trend";
+  let analysisDate = localDateKey(new Date());
   let storageAvailable = true;
   let recoveryNeeded = false;
   let lastCalendarMinute = -1;
+  let renderedTodayDate = "";
+  let cachedTodayDate = "";
+  let cachedTodayMilliseconds = 0;
 
   const $ = (id) => document.getElementById(id);
   const elements = {
@@ -169,6 +190,17 @@
     analysisTaskTrigger: $("analysis-task-trigger"),
     analysisTaskMenu: $("analysis-task-menu"),
     analysisChart: $("analysis-chart"),
+    analysisTaskFilter: document.querySelector(".analysis-task-filter"),
+    analysisTitle: $("analysis-heading"),
+    analysisDescription: document.querySelector(".analysis-heading .section-description"),
+    trendAnalysisContent: $("trend-analysis-content"),
+    dailyPieContent: $("daily-pie-content"),
+    dailyAnalysisDate: $("daily-analysis-date"),
+    dailyPieTotal: $("daily-pie-total"),
+    dailyPieDateLabel: $("daily-pie-date-label"),
+    dailyPieChart: $("daily-pie-chart"),
+    dailyPieEmpty: $("daily-pie-empty"),
+    dailyPieLegend: $("daily-pie-legend"),
     analysisRangeLabel: $("chart-range-label"),
     analysisTotal: $("analysis-total"),
     analysisAverage: $("analysis-average"),
@@ -181,6 +213,7 @@
     runningTaskDot: $("running-task-dot"),
     runningStartTime: $("running-start-time"),
     elapsedTime: $("elapsed-time"),
+    todayFocusTotal: $("today-focus-total"),
     indicator: $("focus-indicator"),
     focusHint: $("focus-hint"),
     taskManager: $("task-manager"),
@@ -558,6 +591,27 @@
     elements.elapsedTime.textContent = formatDuration(Date.now() - state.active.start);
   }
 
+  function renderTodayFocusTime(now = Date.now(), refreshRecords = true) {
+    const today = localDateKey(new Date(now));
+    renderedTodayDate = today;
+    if (refreshRecords || cachedTodayDate !== today) {
+      cachedTodayMilliseconds = 0;
+      for (const session of state.records) {
+        for (const part of splitSession(session)) {
+          if (part.date === today) cachedTodayMilliseconds += part.milliseconds;
+        }
+      }
+      cachedTodayDate = today;
+    }
+    let totalMilliseconds = cachedTodayMilliseconds;
+    if (state.active) {
+      for (const part of splitSession(state.active, now)) {
+        if (part.date === today) totalMilliseconds += part.milliseconds;
+      }
+    }
+    elements.todayFocusTotal.textContent = formatDuration(totalMilliseconds);
+  }
+
   function buildCalendarSessions(year) {
     const daily = new Map();
     let totalMilliseconds = 0;
@@ -681,6 +735,17 @@
   }
 
   function renderAnalysis() {
+    const dailyMode = analysisMode === "daily";
+    elements.analysisTaskFilter.hidden = dailyMode;
+    elements.trendAnalysisContent.hidden = dailyMode;
+    elements.dailyPieContent.hidden = !dailyMode;
+    elements.analysisTitle.textContent = t(dailyMode ? "dailyAnalysisHeading" : "trendHeading");
+    elements.analysisDescription.textContent = t(dailyMode ? "dailyAnalysisDescription" : "trendDescription");
+    if (dailyMode) {
+      renderDailyPie();
+      return;
+    }
+
     const availableTaskIds = new Set(state.tasks.map((task) => task.id));
     const taskFilter = analysisTaskId !== "all" && availableTaskIds.has(analysisTaskId) ? analysisTaskId : "all";
     analysisTaskId = taskFilter;
@@ -769,6 +834,75 @@
       </svg>`;
   }
 
+  function renderDailyPie() {
+    const today = localDateKey(new Date());
+    elements.dailyAnalysisDate.max = today;
+    if (!elements.dailyAnalysisDate.value) elements.dailyAnalysisDate.value = analysisDate;
+    analysisDate = elements.dailyAnalysisDate.value;
+    const sessions = [...state.records];
+    if (state.active) sessions.push({ ...state.active, end: Date.now() });
+    const totalsByTask = new Map();
+    for (const session of sessions) {
+        const key = session.taskId ?? session.taskName;
+        for (const part of splitSession(session, session.id === state.active?.id ? Date.now() : undefined)) {
+          if (part.date !== analysisDate) continue;
+          const existing = totalsByTask.get(key);
+          if (existing) existing.milliseconds += part.milliseconds;
+          else totalsByTask.set(key, {
+            taskId: session.taskId,
+            taskName: session.taskName,
+            color: session.color,
+            milliseconds: part.milliseconds
+          });
+        }
+    }
+    const entries = [...totalsByTask.values()].sort((a, b) => b.milliseconds - a.milliseconds);
+    const totalMilliseconds = entries.reduce((sum, entry) => sum + entry.milliseconds, 0);
+    elements.dailyPieTotal.textContent = formatDuration(totalMilliseconds, true);
+    elements.dailyPieDateLabel.textContent = formatDate(analysisDate);
+    elements.dailyPieEmpty.hidden = totalMilliseconds > 0;
+    elements.dailyPieChart.hidden = totalMilliseconds === 0;
+    elements.dailyPieLegend.hidden = totalMilliseconds === 0;
+    if (totalMilliseconds === 0) {
+        elements.dailyPieChart.innerHTML = "";
+        elements.dailyPieLegend.innerHTML = "";
+        return;
+    }
+
+    const radius = 66;
+    const circumference = 2 * Math.PI * radius;
+    const circles = [];
+    let offset = 0;
+    for (const entry of entries) {
+        const fraction = entry.milliseconds / totalMilliseconds;
+        const segmentLength = circumference * fraction;
+        const percentage = fraction * 100;
+        const segmentLabel = t("pieSegmentAria", {
+          task: entry.taskName,
+          duration: formatDuration(entry.milliseconds, true),
+          percent: percentage.toFixed(1)
+        });
+        circles.push(`<circle class="daily-pie-segment" cx="100" cy="100" r="${radius}" fill="none" stroke="${entry.color}" stroke-width="30" stroke-dasharray="${segmentLength} ${circumference - segmentLength}" stroke-dashoffset="${-offset}" transform="rotate(-90 100 100)" aria-label="${safeText(segmentLabel)}"><title>${safeText(segmentLabel)}</title></circle>`);
+        offset += segmentLength;
+    }
+    elements.dailyPieChart.innerHTML = `
+        <svg class="daily-pie-svg" viewBox="0 0 200 200" role="img" aria-label="${safeText(t("pieChartAria", { date: formatDate(analysisDate) }))}">
+          <circle class="daily-pie-track" cx="100" cy="100" r="${radius}" fill="none" stroke="var(--pie-track)" stroke-width="30"></circle>
+          ${circles.join("")}
+          <text class="daily-pie-center-total" x="100" y="97" text-anchor="middle">${safeText(formatDuration(totalMilliseconds, true))}</text>
+          <text class="daily-pie-center-label" x="100" y="116" text-anchor="middle">${safeText(t("dailyTotalFocus"))}</text>
+        </svg>`;
+    elements.dailyPieLegend.innerHTML = entries.map((entry) => {
+        const percentage = entry.milliseconds / totalMilliseconds * 100;
+        return `<div class="daily-pie-legend-item">
+          <span class="task-swatch" style="--swatch:${entry.color}"></span>
+          <span class="daily-pie-task-name">${safeText(entry.taskName)}</span>
+          <span class="daily-pie-percentage">${percentage.toFixed(1)}%</span>
+          <strong>${formatDuration(entry.milliseconds, true)}</strong>
+        </div>`;
+    }).join("");
+  }
+
   function setTaskMenuOpen(trigger, menu, open, focusSelected = false) {
     menu.hidden = !open;
     trigger.setAttribute("aria-expanded", String(open));
@@ -831,6 +965,7 @@
     renderTaskSelect();
     renderTaskList();
     renderRunningSession();
+    renderTodayFocusTime();
     if (!elements.calendarSection.hidden) {
       if (elements.calendarView.hidden) renderAnalysis();
       else renderCalendar();
@@ -957,9 +1092,15 @@
         ? []
         : state.records.filter((record) => record.taskId === task.id && record.color !== color)
           .map((record) => ({ record, color: record.color }));
+      const changedRecordNames = state.records
+        .filter((record) => record.taskId === task.id && record.taskName !== name)
+        .map((record) => ({ record, name: record.taskName }));
       const activeColor = state.active?.taskId === task.id ? state.active.color : null;
+      const activeName = state.active?.taskId === task.id ? state.active.taskName : null;
       task.name = name;
       task.color = color;
+      for (const { record } of changedRecordNames) record.taskName = name;
+      if (state.active?.taskId === task.id) state.active.taskName = name;
       if (color !== previousColor) {
         for (const { record } of changedRecords) record.color = color;
         if (state.active?.taskId === task.id) state.active.color = color;
@@ -967,7 +1108,9 @@
       rollback = () => {
         task.name = previousName;
         task.color = previousColor;
+        for (const { record, name: originalName } of changedRecordNames) record.taskName = originalName;
         for (const { record, color: originalColor } of changedRecords) record.color = originalColor;
+        if (state.active?.taskId === task.id && activeName !== null) state.active.taskName = activeName;
         if (state.active?.taskId === task.id && activeColor) state.active.color = activeColor;
       };
     } else {
@@ -1106,6 +1249,31 @@
     );
     renderAnalysis();
   });
+  document.querySelector(".analysis-mode-switch").addEventListener("click", (event) => {
+    const button = event.target.closest("[data-analysis-mode]");
+    if (!button) return;
+    analysisMode = button.dataset.analysisMode;
+    document.querySelectorAll("[data-analysis-mode]").forEach((item) => {
+      const selected = item === button;
+      item.classList.toggle("is-active", selected);
+      item.setAttribute("aria-pressed", String(selected));
+    });
+    renderAnalysis();
+  });
+  elements.dailyAnalysisDate.addEventListener("change", () => {
+    const today = localDateKey(new Date());
+    const selectedDate = elements.dailyAnalysisDate.value;
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(selectedDate) ||
+        !Number.isFinite(parseDateKey(selectedDate).getTime()) ||
+        localDateKey(parseDateKey(selectedDate)) !== selectedDate ||
+        selectedDate > today) {
+      elements.dailyAnalysisDate.value = analysisDate;
+      showMessage(t("invalidSelectedDay"), true);
+      return;
+    }
+    analysisDate = selectedDate;
+    renderDailyPie();
+  });
   elements.analysisTaskTrigger.addEventListener("click", () => {
     setTaskMenuOpen(
       elements.analysisTaskTrigger,
@@ -1219,6 +1387,7 @@
   document.addEventListener("visibilitychange", () => {
     if (!document.hidden) {
       renderRunningSession();
+      renderTodayFocusTime();
       const minute = Math.floor(Date.now() / 60000);
       if (minute !== lastCalendarMinute && !elements.calendarSection.hidden) {
         renderCalendar();
@@ -1233,8 +1402,12 @@
   loadState();
   render();
   window.setInterval(() => {
+    const now = Date.now();
+    if (state.active) renderRunningSession();
+    if (state.active || localDateKey(new Date(now)) !== renderedTodayDate) {
+      renderTodayFocusTime(now, false);
+    }
     if (!state.active) return;
-    renderRunningSession();
     const minute = Math.floor(Date.now() / 60000);
     if (minute !== lastCalendarMinute && !elements.calendarSection.hidden) {
       renderCalendar();
